@@ -101,26 +101,28 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 			}
 		},
 		// Create a connection to one proxy routed by route policy.
-		Transport: &http.Transport{
-			ResponseHeaderTimeout: rp.responseHeaderTimeout,
-			IdleConnTimeout:       60 * time.Second,
-			MaxIdleConnsPerHost:   5,
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return rp.CreateConnection(ctx.Value(RouteInfoKey).(*RequestRouteInfo), true)
-			},
-			Proxy: func(req *http.Request) (*url.URL, error) {
-				// Use proxy mode if there is host in HTTP first request line.
-				// GET http://example.com/ HTTP/1.1
-				// Host: example.com
-				//
-				// Normal:
-				// GET / HTTP/1.1
-				// Host: example.com
-				urlHost := req.Context().Value(RouteInfoKey).(*RequestRouteInfo).URLHost
-				if urlHost != "" {
-					return req.URL, nil
-				}
-				return nil, nil
+		Transport: &transportWrapper{
+			transport: &http.Transport{
+				ResponseHeaderTimeout: rp.responseHeaderTimeout,
+				IdleConnTimeout:       60 * time.Second,
+				MaxIdleConnsPerHost:   5,
+				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+					return rp.CreateConnection(ctx.Value(RouteInfoKey).(*RequestRouteInfo), true)
+				},
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					// Use proxy mode if there is host in HTTP first request line.
+					// GET http://example.com/ HTTP/1.1
+					// Host: example.com
+					//
+					// Normal:
+					// GET / HTTP/1.1
+					// Host: example.com
+					urlHost := req.Context().Value(RouteInfoKey).(*RequestRouteInfo).URLHost
+					if urlHost != "" {
+						return req.URL, nil
+					}
+					return nil, nil
+				},
 			},
 		},
 		BufferPool: newWrapPool(),
