@@ -60,24 +60,31 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 	}
 	proxy := &httputil.ReverseProxy{
 		ModifyResponse: func(rsp *http.Response) error {
-			if h := rsp.Header.Get("Content-Type"); strings.Contains(h, "text/html") {
-				data, err := io.ReadAll(rsp.Body)
-				if err != nil {
-					err = fmt.Errorf("read response body error: %w", err)
-					slog.Error("%v", err)
-					return err
-				}
-
-				dataList := strings.SplitN(string(data), "</head>", 2)
-				body := dataList[0]
-				body += `<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"/>`
-				body += "\n"
-				body += `</head>`
-				body += dataList[1]
-				rsp.Body = io.NopCloser(strings.NewReader(body))
-				rsp.Header["Content-Length"] = []string{fmt.Sprint(int64(len(body)))}
-				rsp.ContentLength = int64(len(body))
+			h := rsp.Header.Get("Content-Type")
+			if !strings.Contains(h, "text/html") {
+				return nil
 			}
+
+			data, err := io.ReadAll(rsp.Body)
+			if err != nil {
+				err = fmt.Errorf("read response body error: %w", err)
+				slog.Error("%v", err)
+				return err
+			}
+
+			if !bytes.Contains(data, []byte("<head>")) {
+				return nil
+			}
+
+			dataList := strings.SplitN(string(data), "</head>", 2)
+			body := dataList[0]
+			body += `<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"/>`
+			body += "\n"
+			body += `</head>`
+			body += dataList[1]
+			rsp.Body = io.NopCloser(strings.NewReader(body))
+			rsp.Header["Content-Length"] = []string{fmt.Sprint(int64(len(body)))}
+			rsp.ContentLength = int64(len(body))
 			return nil
 		},
 		// Modify incoming requests by route policies.
