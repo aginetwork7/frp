@@ -20,7 +20,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	stdlog "log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -57,6 +59,27 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 		vhostRouter:           vhostRouter,
 	}
 	proxy := &httputil.ReverseProxy{
+		ModifyResponse: func(rsp *http.Response) error {
+			if h := rsp.Header.Get("Content-Type"); strings.Contains(h, "text/html") {
+				data, err := io.ReadAll(rsp.Body)
+				if err != nil {
+					err = fmt.Errorf("read response body error: %w", err)
+					slog.Error("%v", err)
+					return err
+				}
+
+				dataList := strings.SplitN(string(data), "</head>", 2)
+				body := dataList[0]
+				body += `<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"/>`
+				body += "\n"
+				body += `</head>`
+				body += dataList[1]
+				rsp.Body = io.NopCloser(strings.NewReader(body))
+				rsp.Header["Content-Length"] = []string{fmt.Sprint(int64(len(body)))}
+				rsp.ContentLength = int64(len(body))
+			}
+			return nil
+		},
 		// Modify incoming requests by route policies.
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.Out.Header["X-Forwarded-For"] = r.In.Header["X-Forwarded-For"]
@@ -101,28 +124,26 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 			}
 		},
 		// Create a connection to one proxy routed by route policy.
-		Transport: &transportWrapper{
-			transport: &http.Transport{
-				ResponseHeaderTimeout: rp.responseHeaderTimeout,
-				IdleConnTimeout:       60 * time.Second,
-				MaxIdleConnsPerHost:   5,
-				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-					return rp.CreateConnection(ctx.Value(RouteInfoKey).(*RequestRouteInfo), true)
-				},
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					// Use proxy mode if there is host in HTTP first request line.
-					// GET http://example.com/ HTTP/1.1
-					// Host: example.com
-					//
-					// Normal:
-					// GET / HTTP/1.1
-					// Host: example.com
-					urlHost := req.Context().Value(RouteInfoKey).(*RequestRouteInfo).URLHost
-					if urlHost != "" {
-						return req.URL, nil
-					}
-					return nil, nil
-				},
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: rp.responseHeaderTimeout,
+			IdleConnTimeout:       60 * time.Second,
+			MaxIdleConnsPerHost:   5,
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return rp.CreateConnection(ctx.Value(RouteInfoKey).(*RequestRouteInfo), true)
+			},
+			Proxy: func(req *http.Request) (*url.URL, error) {
+				// Use proxy mode if there is host in HTTP first request line.
+				// GET http://example.com/ HTTP/1.1
+				// Host: example.com
+				//
+				// Normal:
+				// GET / HTTP/1.1
+				// Host: example.com
+				urlHost := req.Context().Value(RouteInfoKey).(*RequestRouteInfo).URLHost
+				if urlHost != "" {
+					return req.URL, nil
+				}
+				return nil, nil
 			},
 		},
 		BufferPool: newWrapPool(),
