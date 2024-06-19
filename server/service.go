@@ -60,6 +60,8 @@ import (
 const (
 	connReadTimeout       time.Duration = 10 * time.Second
 	vhostReadWriteTimeout time.Duration = 30 * time.Second
+	forwardHost                         = "remote.agi7.ai"
+	forwardCookieName                   = "agi7.forward.auth"
 )
 
 func init() {
@@ -666,12 +668,12 @@ type authMiddleware struct {
 }
 
 func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if !strings.HasSuffix(request.Host, "remote.agi7.ai") {
+	if !strings.HasSuffix(request.Host, forwardHost) {
 		m.next.ServeHTTP(writer, request)
 		return
 	}
 
-	cookie, err := request.Cookie("agi7.forward.auth")
+	cookie, err := request.Cookie(forwardCookieName)
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
 		writer.Write([]byte(err.Error()))
