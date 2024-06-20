@@ -681,10 +681,16 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	}
 
 	var token = cookie.Value
-	_, err = m.authVerify.GetVerifyData(token)
+	claims, err := m.authVerify.GetVerifyData(token)
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
 		writer.Write([]byte(err.Error()))
+		return
+	}
+
+	if !strings.HasPrefix(request.Host, fmt.Sprintf("%s.", claims["domain"])) {
+		writer.WriteHeader(http.StatusForbidden)
+		writer.Write([]byte(fmt.Sprintf("domain access deny")))
 		return
 	}
 
