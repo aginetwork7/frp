@@ -694,5 +694,14 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
+	cookieData := request.Header.Get("Cookie")
+	var cc string
+	for _, v := range strings.Split(cookieData, ";") {
+		if strings.HasPrefix(v, forwardCookieName) {
+			continue
+		}
+		cc += v + ";"
+	}
+	request.Header.Set("Cookie", cc)
 	m.next.ServeHTTP(writer, request)
 }
