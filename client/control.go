@@ -182,6 +182,15 @@ func (ctl *Control) handleNatHoleResp(m msg.Message) {
 	}
 }
 
+func (ctl *Control) handleCustom(m msg.Message) {
+	xl := ctl.xl
+	inMsg := m.(*msg.DataCustom)
+	xl.Debugf("client get custom message: %s", inMsg)
+	if err := ctl.Close(); err != nil {
+		xl.Errorf("failed to close client proxy, err=%v", err)
+	}
+}
+
 func (ctl *Control) handlePong(m msg.Message) {
 	xl := ctl.xl
 	inMsg := m.(*msg.Pong)
@@ -230,6 +239,7 @@ func (ctl *Control) registerMsgHandlers() {
 	ctl.msgDispatcher.RegisterHandler(&msg.NewProxyResp{}, ctl.handleNewProxyResp)
 	ctl.msgDispatcher.RegisterHandler(&msg.NatHoleResp{}, ctl.handleNatHoleResp)
 	ctl.msgDispatcher.RegisterHandler(&msg.Pong{}, ctl.handlePong)
+	ctl.msgDispatcher.RegisterHandler(&msg.DataCustom{}, ctl.handleCustom)
 }
 
 // headerWorker sends heartbeat to server and check heartbeat timeout.

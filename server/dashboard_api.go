@@ -17,6 +17,7 @@ package server
 import (
 	"cmp"
 	"encoding/json"
+	"github.com/fatedier/frp/pkg/msg"
 	"net/http"
 	"slices"
 
@@ -54,6 +55,7 @@ func (svr *Service) registerRouteHandlers(helper *httppkg.RouterRegisterHelper) 
 	subRouter.HandleFunc("/api/serverinfo", svr.apiServerInfo).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}", svr.apiProxyByType).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}/{name}", svr.apiProxyByTypeAndName).Methods("GET")
+	subRouter.HandleFunc("/api/proxy/{type}/{name}/close", svr.apiCloseProxyByTypeAndName).Methods("POST")
 	subRouter.HandleFunc("/api/traffic/{name}", svr.apiProxyTraffic).Methods("GET")
 	subRouter.HandleFunc("/api/proxies", svr.deleteProxies).Methods("DELETE")
 
@@ -283,6 +285,36 @@ type GetProxyStatsResp struct {
 	Status          string      `json:"status"`
 }
 
+func (svr *Service) apiCloseProxyByTypeAndName(w http.ResponseWriter, r *http.Request) {
+	res := GeneralResponse{Code: 200}
+	params := mux.Vars(r)
+	proxyType := params["type"]
+	name := params["name"]
+
+	defer func() {
+		log.Infof("Http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+	log.Infof("Http request: [%s]", r.URL.Path)
+
+	var proxyStatsResp GetProxyStatsResp
+	pxy, ok := svr.pxyManager.GetByName(name)
+	cc, _ := svr.ctlManager.GetByID()
+	cc.CloseProxy()
+	cc.msgDispatcher.Send(&msg.DataCustom{})
+
+	proxyStatsResp, res.Code, res.Msg = svr.getProxyStatsByTypeAndName(proxyType, name)
+	if res.Code != 200 {
+		return
+	}
+
+	buf, _ := json.Marshal(&proxyStatsResp)
+	res.Msg = string(buf)
+}
+
 // /api/proxy/:type/:name
 func (svr *Service) apiProxyByTypeAndName(w http.ResponseWriter, r *http.Request) {
 	res := GeneralResponse{Code: 200}
@@ -317,6 +349,7 @@ func (svr *Service) getProxyStatsByTypeAndName(proxyType string, proxyName strin
 		msg = "no proxy info found"
 	} else {
 		if pxy, ok := svr.pxyManager.GetByName(proxyName); ok {
+			pxy.Close()
 			content, err := json.Marshal(pxy.GetConfigurer())
 			if err != nil {
 				log.Warnf("marshal proxy [%s] conf info error: %v", ps.Name, err)

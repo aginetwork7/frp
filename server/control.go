@@ -367,6 +367,7 @@ func (ctl *Control) worker() {
 func (ctl *Control) registerMsgHandlers() {
 	ctl.msgDispatcher.RegisterHandler(&msg.NewProxy{}, ctl.handleNewProxy)
 	ctl.msgDispatcher.RegisterHandler(&msg.Ping{}, ctl.handlePing)
+	ctl.msgDispatcher.RegisterHandler(&msg.DataCustom{}, ctl.handleCustom)
 	ctl.msgDispatcher.RegisterHandler(&msg.NatHoleVisitor{}, msg.AsyncHandler(ctl.handleNatHoleVisitor))
 	ctl.msgDispatcher.RegisterHandler(&msg.NatHoleClient{}, msg.AsyncHandler(ctl.handleNatHoleClient))
 	ctl.msgDispatcher.RegisterHandler(&msg.NatHoleReport{}, msg.AsyncHandler(ctl.handleNatHoleReport))
@@ -406,6 +407,14 @@ func (ctl *Control) handleNewProxy(m msg.Message) {
 		metrics.Server.NewProxy(inMsg.ProxyName, inMsg.ProxyType)
 	}
 	_ = ctl.msgDispatcher.Send(resp)
+}
+
+func (ctl *Control) handleCustom(m msg.Message) {
+	inMsg := m.(*msg.DataCustom)
+
+	xl := ctl.xl
+	xl.Debugf("handle custom request")
+	_ = ctl.msgDispatcher.Send(inMsg)
 }
 
 func (ctl *Control) handlePing(m msg.Message) {
