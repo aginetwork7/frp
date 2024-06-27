@@ -17,7 +17,6 @@ package server
 import (
 	"cmp"
 	"encoding/json"
-	"github.com/fatedier/frp/pkg/msg"
 	"net/http"
 	"slices"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/fatedier/frp/pkg/config/types"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/metrics/mem"
+	"github.com/fatedier/frp/pkg/msg"
 	httppkg "github.com/fatedier/frp/pkg/util/http"
 	"github.com/fatedier/frp/pkg/util/log"
 	netpkg "github.com/fatedier/frp/pkg/util/net"
@@ -288,7 +288,6 @@ type GetProxyStatsResp struct {
 func (svr *Service) apiCloseProxyByTypeAndName(w http.ResponseWriter, r *http.Request) {
 	res := GeneralResponse{Code: 200}
 	params := mux.Vars(r)
-	proxyType := params["type"]
 	name := params["name"]
 
 	defer func() {
@@ -300,19 +299,27 @@ func (svr *Service) apiCloseProxyByTypeAndName(w http.ResponseWriter, r *http.Re
 	}()
 	log.Infof("Http request: [%s]", r.URL.Path)
 
-	var proxyStatsResp GetProxyStatsResp
 	pxy, ok := svr.pxyManager.GetByName(name)
-	cc, _ := svr.ctlManager.GetByID()
-	cc.CloseProxy()
-	cc.msgDispatcher.Send(&msg.DataCustom{})
-
-	proxyStatsResp, res.Code, res.Msg = svr.getProxyStatsByTypeAndName(proxyType, name)
-	if res.Code != 200 {
+	if !ok {
+		res.Code = 404
+		res.Msg = "not found"
 		return
 	}
 
-	buf, _ := json.Marshal(&proxyStatsResp)
-	res.Msg = string(buf)
+	cc, ok := svr.ctlManager.GetByID(pxy.GetUserInfo().RunID)
+	if !ok {
+		res.Code = 404
+		res.Msg = "not found"
+		return
+	}
+
+	err := cc.msgDispatcher.Send(&msg.DataCustom{})
+	if err != nil {
+		res.Code = 500
+		res.Msg = err.Error()
+	} else {
+		res.Msg = "ok"
+	}
 }
 
 // /api/proxy/:type/:name
