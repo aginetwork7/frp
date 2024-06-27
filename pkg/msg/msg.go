@@ -38,7 +38,7 @@ const (
 	TypeNatHoleResp        = 'm'
 	TypeNatHoleSid         = '5'
 	TypeNatHoleReport      = '6'
-	TypeCustom             = '7'
+	TypeClientProxyClose   = '7'
 )
 
 var msgTypeMap = map[byte]interface{}{
@@ -60,7 +60,7 @@ var msgTypeMap = map[byte]interface{}{
 	TypeNatHoleResp:        NatHoleResp{},
 	TypeNatHoleSid:         NatHoleSid{},
 	TypeNatHoleReport:      NatHoleReport{},
-	TypeCustom:             DataCustom{},
+	TypeClientProxyClose:   ClientProxyClose{},
 }
 
 var TypeNameNatHoleResp = reflect.TypeOf(&NatHoleResp{}).Elem().Name()
@@ -246,5 +246,6 @@ type NatHoleReport struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-type DataCustom struct {
+type ClientProxyClose struct {
+	Name string
 }

@@ -313,7 +313,7 @@ func (svr *Service) apiCloseProxyByTypeAndName(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err := cc.msgDispatcher.Send(&msg.DataCustom{})
+	err := cc.msgDispatcher.Send(&msg.ClientProxyClose{Name: name})
 	if err != nil {
 		res.Code = 500
 		res.Msg = err.Error()
