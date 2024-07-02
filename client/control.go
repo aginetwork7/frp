@@ -196,11 +196,18 @@ func (ctl *Control) handlePong(m msg.Message) {
 	xl := ctl.xl
 	inMsg := m.(*msg.Pong)
 
+	if inMsg.AuthErr != "" {
+		xl.Errorf("Pong message contains auth error: %s", inMsg.AuthErr)
+		ctl.svr.GracefulClose(0)
+		return
+	}
+
 	if inMsg.Error != "" {
 		xl.Errorf("Pong message contains error: %s", inMsg.Error)
 		ctl.closeSession()
 		return
 	}
+
 	ctl.lastPong.Store(time.Now())
 	xl.Debugf("receive heartbeat from server")
 }

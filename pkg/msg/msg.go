@@ -180,7 +180,8 @@ type Ping struct {
 }
 
 type Pong struct {
-	Error string `json:"error,omitempty"`
+	Error   string `json:"error,omitempty"`
+	AuthErr string `json:"auth_err,omitempty"`
 }
 
 type UDPPacket struct {

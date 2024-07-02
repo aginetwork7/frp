@@ -430,14 +430,19 @@ func (ctl *Control) handlePing(m msg.Message) {
 		Ping: *inMsg,
 	}
 	retContent, err := ctl.pluginManager.Ping(content)
+	var authErr string
 	if err == nil {
 		inMsg = &retContent.Ping
 		err = ctl.authVerifier.VerifyPing(inMsg)
+		if err != nil {
+			authErr = err.Error()
+		}
 	}
 	if err != nil {
 		xl.Warnf("received invalid ping: %v", err)
 		_ = ctl.msgDispatcher.Send(&msg.Pong{
-			Error: util.GenerateResponseErrorString("invalid ping", err, lo.FromPtr(ctl.serverCfg.DetailedErrorsToClient)),
+			Error:   util.GenerateResponseErrorString("invalid ping", err, lo.FromPtr(ctl.serverCfg.DetailedErrorsToClient)),
+			AuthErr: authErr,
 		})
 		return
 	}
