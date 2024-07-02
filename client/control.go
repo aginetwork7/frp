@@ -51,6 +51,8 @@ type SessionContext struct {
 }
 
 type Control struct {
+	svr *Service
+
 	// service context
 	ctx context.Context
 	xl  *xlog.Logger
@@ -79,9 +81,10 @@ type Control struct {
 	msgDispatcher *msg.Dispatcher
 }
 
-func NewControl(ctx context.Context, sessionCtx *SessionContext) (*Control, error) {
+func NewControl(ctx context.Context, sessionCtx *SessionContext, svr *Service) (*Control, error) {
 	// new xlog instance
 	ctl := &Control{
+		svr:        svr,
 		ctx:        ctx,
 		xl:         xlog.FromContextSafe(ctx),
 		sessionCtx: sessionCtx,
@@ -185,10 +188,8 @@ func (ctl *Control) handleNatHoleResp(m msg.Message) {
 func (ctl *Control) handleCustom(m msg.Message) {
 	xl := ctl.xl
 	inMsg := m.(*msg.ClientProxyClose)
-	xl.Debugf("client get close message: %s", inMsg)
-	if err := ctl.Close(); err != nil {
-		xl.Errorf("failed to close client proxy, err=%v", err)
-	}
+	xl.Infof("client get close message: %s", inMsg)
+	ctl.svr.GracefulClose(0)
 }
 
 func (ctl *Control) handlePong(m msg.Message) {
