@@ -100,11 +100,8 @@ func (svr *Service) healthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (svr *Service) apiServerSub(w http.ResponseWriter, r *http.Request) {
-	svr.ss.CreateStream(sseName)
-
 	go func() {
 		<-r.Context().Done()
-		svr.ss.RemoveStream(sseName)
 		log.Infof("The client is disconnected here, name=%s", sseName)
 	}()
 

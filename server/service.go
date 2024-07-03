@@ -162,6 +162,8 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	}
 
 	server := sse.New()
+	server.AutoStream = true
+
 	svr := &Service{
 		ss: server,
 
