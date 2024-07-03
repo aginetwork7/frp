@@ -17,6 +17,7 @@ package server
 import (
 	"cmp"
 	"encoding/json"
+	"math"
 	"net/http"
 	"slices"
 
@@ -470,6 +471,10 @@ type ringBuffer struct {
 }
 
 func (r *ringBuffer) Rate() float64 {
+	if len(r.data) < r.size {
+		return math.NaN()
+	}
+
 	var growthRate float64
 	var data = r.data
 
