@@ -52,6 +52,7 @@ func (svr *Service) registerRouteHandlers(helper *httppkg.RouterRegisterHelper) 
 	}
 
 	// apis
+	subRouter.HandleFunc("/api/sub", svr.apiServerSub)
 	subRouter.HandleFunc("/api/serverinfo", svr.apiServerInfo).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}", svr.apiProxyByType).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}/{name}", svr.apiProxyByTypeAndName).Methods("GET")
@@ -95,6 +96,16 @@ type serverInfoResp struct {
 // /healthz
 func (svr *Service) healthz(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(200)
+}
+
+func (svr *Service) apiServerSub(w http.ResponseWriter, r *http.Request) {
+	go func() {
+		<-r.Context().Done()
+		svr.ss.RemoveStream(sseName)
+		log.Infof("The client is disconnected here, name=%s", sseName)
+	}()
+
+	svr.ss.ServeHTTP(w, r)
 }
 
 // /api/serverinfo
@@ -208,6 +219,7 @@ type ProxyStatsInfo struct {
 	LastStartTime   string      `json:"lastStartTime"`
 	LastCloseTime   string      `json:"lastCloseTime"`
 	Status          string      `json:"status"`
+	TrafficOutList  []int64     `json:"traffic_out_list"`
 }
 
 type GetProxyInfoResp struct {
@@ -444,4 +456,45 @@ func (svr *Service) deleteProxies(w http.ResponseWriter, r *http.Request) {
 	}
 	cleared, total := mem.StatsCollector.ClearOfflineProxies()
 	log.Infof("cleared [%d] offline proxies, total [%d] proxies", cleared, total)
+}
+
+func newRingBuffer(size int) *ringBuffer {
+	return &ringBuffer{size: size, data: make([]int64, 0, size+1)}
+}
+
+type ringBuffer struct {
+	size int
+	data []int64
+}
+
+func (r *ringBuffer) Rate() float64 {
+	var growthRate float64
+	var data = r.data
+
+	for i := 1; i < len(data); i++ {
+		growthRate = (float64(data[i]) - float64(data[i-1])) / float64(data[i-1]) * 100
+	}
+
+	return growthRate
+}
+
+func (r *ringBuffer) Add(d int64) *ringBuffer {
+	if len(r.data) < r.size {
+		r.data = append(r.data, d)
+	} else {
+		r.data = append(r.data[1:], d)
+	}
+	return r
+}
+
+func (r *ringBuffer) Reset() {
+	r.data = r.data[:0]
+}
+
+type ProxyPublishInfo struct {
+	Name          string   `json:"name"`
+	LastStartTime string   `json:"lastStartTime"`
+	Time          int64    `json:"time"`
+	Offline       bool     `json:"offline"`
+	TrafficRate   *float64 `json:"traffic_rate,omitempty"`
 }
