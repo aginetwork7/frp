@@ -354,6 +354,8 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 		return nil, fmt.Errorf("create nat hole controller error, %v", err)
 	}
 	svr.rc.NatHoleController = nc
+
+	go svr.checkProxyStatusTimer()
 	return svr, nil
 }
 
@@ -727,24 +729,27 @@ func (svr *Service) checkProxyStatusTimer() {
 			default:
 			}
 
-			// update proxy traffic every 15s, total 30m
-			var mapSet = make(map[string]bool)
-			for _, info := range svr.getProxyStatsByType("http") {
-				mapSet[info.Name] = true
-				if vv, ok := svr.proxyTraffic.Load(info.Name); ok {
-					vv.(*ringBuffer).Add(info.TodayTrafficOut)
-				} else {
-					svr.proxyTraffic.Store(info.Name, newRingBuffer(120).Add(info.TodayTrafficOut))
+			func() {
+				// update proxy traffic every 15s, total 30m
+				var mapSet = make(map[string]bool)
+				for _, info := range svr.getProxyStatsByType("http") {
+					mapSet[info.Name] = true
+					if vv, ok := svr.proxyTraffic.Load(info.Name); ok {
+						vv.(*ringBuffer).Add(info.TodayTrafficOut)
+					} else {
+						svr.proxyTraffic.Store(info.Name, newRingBuffer(120).Add(info.TodayTrafficOut))
+					}
 				}
-			}
 
-			// delete old data
-			svr.proxyTraffic.Range(func(key, value any) bool {
-				if !mapSet[key.(string)] {
-					svr.proxyTraffic.Delete(key)
-				}
-				return true
-			})
+				// delete old data
+				svr.proxyTraffic.Range(func(key, value any) bool {
+					if !mapSet[key.(string)] {
+						svr.proxyTraffic.Delete(key)
+					}
+					return true
+				})
+			}()
+
 			time.Sleep(time.Second * 15)
 		}
 	}()
