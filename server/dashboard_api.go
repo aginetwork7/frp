@@ -476,10 +476,13 @@ func (r *ringBuffer) Rate() float64 {
 
 	var growthRate float64
 	for i := 1; i < len(data); i++ {
+		if data[i-1] == 0 {
+			continue
+		}
 		growthRate += (float64(data[i]) - float64(data[i-1])) / float64(data[i-1]) * 100
 	}
 
-	log.Infof("rate calc: %f", growthRate)
+	log.Infof("rate calc: %f, %d", growthRate, len(data))
 
 	if len(data) < r.size {
 		return math.NaN()
