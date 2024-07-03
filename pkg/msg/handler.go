@@ -15,6 +15,7 @@
 package msg
 
 import (
+	"fmt"
 	"io"
 	"reflect"
 )
@@ -69,6 +70,7 @@ func (d *Dispatcher) readLoop() {
 			return
 		}
 
+		fmt.Printf("receive message from server: %s, exists: %v\n\n\n\n", reflect.TypeOf(m), d.msgHandlers[reflect.TypeOf(m)] != nil)
 		if handler, ok := d.msgHandlers[reflect.TypeOf(m)]; ok {
 			handler(m)
 		} else if d.defaultHandler != nil {

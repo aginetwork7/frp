@@ -26,6 +26,7 @@ import (
 	"github.com/fatedier/frp/pkg/config/types"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/metrics/mem"
+	"github.com/fatedier/frp/pkg/msg"
 	httppkg "github.com/fatedier/frp/pkg/util/http"
 	"github.com/fatedier/frp/pkg/util/log"
 	netpkg "github.com/fatedier/frp/pkg/util/net"
@@ -54,6 +55,7 @@ func (svr *Service) registerRouteHandlers(helper *httppkg.RouterRegisterHelper) 
 	subRouter.HandleFunc("/api/serverinfo", svr.apiServerInfo).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}", svr.apiProxyByType).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}/{name}", svr.apiProxyByTypeAndName).Methods("GET")
+	subRouter.HandleFunc("/api/proxy/{type}/{name}/close", svr.apiCloseProxyByTypeAndName).Methods("POST")
 	subRouter.HandleFunc("/api/traffic/{name}", svr.apiProxyTraffic).Methods("GET")
 	subRouter.HandleFunc("/api/proxies", svr.deleteProxies).Methods("DELETE")
 
@@ -283,6 +285,43 @@ type GetProxyStatsResp struct {
 	Status          string      `json:"status"`
 }
 
+func (svr *Service) apiCloseProxyByTypeAndName(w http.ResponseWriter, r *http.Request) {
+	res := GeneralResponse{Code: 200}
+	params := mux.Vars(r)
+	name := params["name"]
+
+	defer func() {
+		log.Infof("Http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+	log.Infof("Http request: [%s]", r.URL.Path)
+
+	pxy, ok := svr.pxyManager.GetByName(name)
+	if !ok {
+		res.Code = 404
+		res.Msg = "not found"
+		return
+	}
+
+	cc, ok := svr.ctlManager.GetByID(pxy.GetUserInfo().RunID)
+	if !ok {
+		res.Code = 404
+		res.Msg = "not found"
+		return
+	}
+
+	err := cc.msgDispatcher.Send(&msg.ClientProxyClose{Name: name})
+	if err != nil {
+		res.Code = 500
+		res.Msg = err.Error()
+	} else {
+		res.Msg = "ok"
+	}
+}
+
 // /api/proxy/:type/:name
 func (svr *Service) apiProxyByTypeAndName(w http.ResponseWriter, r *http.Request) {
 	res := GeneralResponse{Code: 200}
@@ -317,6 +356,7 @@ func (svr *Service) getProxyStatsByTypeAndName(proxyType string, proxyName strin
 		msg = "no proxy info found"
 	} else {
 		if pxy, ok := svr.pxyManager.GetByName(proxyName); ok {
+			pxy.Close()
 			content, err := json.Marshal(pxy.GetConfigurer())
 			if err != nil {
 				log.Warnf("marshal proxy [%s] conf info error: %v", ps.Name, err)
