@@ -468,18 +468,24 @@ type ringBuffer struct {
 }
 
 func (r *ringBuffer) Rate() float64 {
-	if len(r.data) < r.size {
+	var data = r.data
+
+	if len(data) == 0 {
 		return math.NaN()
 	}
 
 	var growthRate float64
-	var data = r.data
-
 	for i := 1; i < len(data); i++ {
-		growthRate = (float64(data[i]) - float64(data[i-1])) / float64(data[i-1]) * 100
+		growthRate += (float64(data[i]) - float64(data[i-1])) / float64(data[i-1]) * 100
 	}
 
-	return growthRate
+	log.Infof("rate calc: %f", growthRate)
+
+	if len(data) < r.size {
+		return math.NaN()
+	}
+
+	return growthRate / float64(len(data)-1)
 }
 
 func (r *ringBuffer) Add(d int64) *ringBuffer {
