@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -161,8 +162,6 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	}
 
 	server := sse.New()
-	server.CreateStream(sseName)
-
 	svr := &Service{
 		ss: server,
 
@@ -772,7 +771,10 @@ func (svr *Service) checkProxyStatusTimer() {
 					var rate *float64
 					var pp, ok = svr.proxyTraffic.Load(info.Name)
 					if ok {
-						rate = lo.ToPtr(pp.(*ringBuffer).Rate())
+						var rr = pp.(*ringBuffer).Rate()
+						if !math.IsNaN(rr) {
+							rate = lo.ToPtr(rr)
+						}
 					}
 
 					var dd = ProxyPublishInfo{
