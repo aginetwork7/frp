@@ -740,6 +740,8 @@ func (svr *Service) checkProxyStatusTimer() {
 					}
 				}
 
+				log.Infof("check and record proxy traffic, proxy_count=%d", len(mapSet))
+
 				// delete old data
 				svr.proxyTraffic.Range(func(key, value any) bool {
 					if !mapSet[key.(string)] {
@@ -761,13 +763,12 @@ func (svr *Service) checkProxyStatusTimer() {
 			default:
 			}
 
-			if !svr.ss.StreamExists(sseName) {
-				time.Sleep(time.Second * 5)
-				continue
-			}
-
 			func() {
-				for _, info := range svr.getProxyStatsByType("http") {
+				var proxyList = svr.getProxyStatsByType("http")
+
+				log.Infof("publish proxy status, proxy_count=%d, stream=%v", len(proxyList), svr.ss.StreamExists(sseName))
+
+				for _, info := range proxyList {
 					var rate *float64
 					var pp, ok = svr.proxyTraffic.Load(info.Name)
 					if ok {
