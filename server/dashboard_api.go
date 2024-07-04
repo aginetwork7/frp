@@ -368,7 +368,6 @@ func (svr *Service) getProxyStatsByTypeAndName(proxyType string, proxyName strin
 		msg = "no proxy info found"
 	} else {
 		if pxy, ok := svr.pxyManager.GetByName(proxyName); ok {
-			pxy.Close()
 			content, err := json.Marshal(pxy.GetConfigurer())
 			if err != nil {
 				log.Warnf("marshal proxy [%s] conf info error: %v", ps.Name, err)
