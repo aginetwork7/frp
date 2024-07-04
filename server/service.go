@@ -688,7 +688,9 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	cookie, err := request.Cookie(forwardCookieName)
+	var domain = strings.SplitN(request.Host, ".", 2)[0]
+	var cookieName = fmt.Sprintf("%s.%s", forwardCookieName, domain)
+	cookie, err := request.Cookie(cookieName)
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
 		writer.Write([]byte(err.Error()))
@@ -712,7 +714,7 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	cookieData := request.Header.Get("Cookie")
 	var cc string
 	for _, v := range strings.Split(cookieData, ";") {
-		if strings.HasPrefix(v, forwardCookieName) {
+		if strings.HasPrefix(v, cookieName) {
 			continue
 		}
 		cc += v + ";"
@@ -738,7 +740,7 @@ func (svr *Service) checkProxyStatusTimer() {
 					if vv, ok := svr.proxyTraffic.Load(info.Name); ok {
 						vv.(*ringBuffer).Add(info.TodayTrafficOut)
 					} else {
-						svr.proxyTraffic.Store(info.Name, newRingBuffer(120).Add(info.TodayTrafficOut))
+						svr.proxyTraffic.Store(info.Name, newRingBuffer(120, info.Name).Add(info.TodayTrafficOut))
 					}
 				}
 

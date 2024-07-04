@@ -458,13 +458,14 @@ func (svr *Service) deleteProxies(w http.ResponseWriter, r *http.Request) {
 	log.Infof("cleared [%d] offline proxies, total [%d] proxies", cleared, total)
 }
 
-func newRingBuffer(size int) *ringBuffer {
-	return &ringBuffer{size: size, data: make([]int64, 0, size+1)}
+func newRingBuffer(size int, name string) *ringBuffer {
+	return &ringBuffer{size: size, data: make([]int64, 0, size+1), name: name}
 }
 
 type ringBuffer struct {
 	size int
 	data []int64
+	name string
 }
 
 func (r *ringBuffer) Rate() float64 {
@@ -482,7 +483,7 @@ func (r *ringBuffer) Rate() float64 {
 		growthRate += (float64(data[i]) - float64(data[i-1])) / float64(data[i-1]) * 100
 	}
 
-	log.Infof("rate calc: %f, %d", growthRate, len(data))
+	log.Infof("proxy rate calc: rate=%f count=%d name=%s", growthRate, len(data), r.name)
 
 	if len(data) < r.size {
 		return math.NaN()
