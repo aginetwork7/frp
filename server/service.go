@@ -693,7 +693,7 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	cookie, err := request.Cookie(cookieName)
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
-		writer.Write([]byte(err.Error()))
+		writer.Write([]byte(fmt.Sprintf("cookie not found, name=%s err=%s", cookieName, err.Error())))
 		return
 	}
 
@@ -701,13 +701,13 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	claims, err := m.authVerify.GetVerifyData(token)
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
-		writer.Write([]byte(err.Error()))
+		writer.Write([]byte(fmt.Sprintf("failed to verify auth, err=%s", err.Error())))
 		return
 	}
 
 	if !strings.HasPrefix(request.Host, fmt.Sprintf("%s.", claims["domain"])) {
 		writer.WriteHeader(http.StatusForbidden)
-		writer.Write([]byte(fmt.Sprintf("domain access deny")))
+		writer.Write([]byte("domain access deny"))
 		return
 	}
 
@@ -720,6 +720,7 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		cc += v + ";"
 	}
 	request.Header.Set("Cookie", cc)
+
 	m.next.ServeHTTP(writer, request)
 }
 
