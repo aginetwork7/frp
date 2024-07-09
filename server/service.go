@@ -356,7 +356,7 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	}
 	svr.rc.NatHoleController = nc
 
-	go svr.checkProxyStatusTimer()
+	svr.checkProxyStatusTimer()
 	return svr, nil
 }
 
