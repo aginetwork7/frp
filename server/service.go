@@ -55,7 +55,6 @@ import (
 	"github.com/fatedier/golib/net/mux"
 	fmux "github.com/hashicorp/yamux"
 	quic "github.com/quic-go/quic-go"
-	"github.com/r3labs/sse/v2"
 	"github.com/samber/lo"
 )
 
@@ -681,6 +680,12 @@ type authMiddleware struct {
 	next       http.Handler
 }
 
+const SessionErrMsgFmt = "The session is expired or invalid. Please close the current page and go to the device page to retry. (code=%d)"
+const (
+	CookieNotFound = 1
+	AuthFailed     = 2
+)
+
 func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if !strings.HasSuffix(request.Host, forwardHost) {
 		m.next.ServeHTTP(writer, request)
@@ -693,7 +698,7 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
 		log.Errorf("cookie not found, name=%s err=%s", cookieName, err.Error())
-		writer.Write([]byte("The session is expired or invalid. Please close the currrent page and go to the device page to retry."))
+		writer.Write([]byte(fmt.Sprintf(SessionErrMsgFmt, CookieNotFound)))
 		return
 	}
 
@@ -701,7 +706,8 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	claims, err := m.authVerify.GetVerifyData(token)
 	if err != nil {
 		writer.WriteHeader(http.StatusForbidden)
-		writer.Write([]byte(fmt.Sprintf("failed to verify auth, err=%s", err.Error())))
+		log.Errorf("failed to verify auth, err=%s", err.Error())
+		writer.Write([]byte(fmt.Sprintf(SessionErrMsgFmt, AuthFailed)))
 		return
 	}
 
