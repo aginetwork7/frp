@@ -462,7 +462,7 @@ type proxyTraffic struct {
 	lastTrafficTime int64
 }
 
-func (r *proxyTraffic) Add(d int64) *proxyTraffic {
+func (r *proxyTraffic) Set(d int64) *proxyTraffic {
 	if r.lastTraffic == d {
 		return r
 	}

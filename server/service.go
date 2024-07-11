@@ -740,9 +740,9 @@ func (svr *Service) checkProxyStatusTimer() {
 				for _, info := range svr.getProxyStatsByType("http") {
 					mapSet[info.Name] = true
 					if vv, ok := svr.proxyTraffic.Load(info.Name); ok {
-						vv.(*proxyTraffic).Add(info.TodayTrafficOut)
+						vv.(*proxyTraffic).Set(info.TodayTrafficOut)
 					} else {
-						svr.proxyTraffic.Store(info.Name, new(proxyTraffic).Add(info.TodayTrafficOut))
+						svr.proxyTraffic.Store(info.Name, new(proxyTraffic).Set(info.TodayTrafficOut))
 					}
 				}
 
