@@ -457,10 +457,6 @@ func (svr *Service) deleteProxies(w http.ResponseWriter, r *http.Request) {
 	log.Infof("cleared [%d] offline proxies, total [%d] proxies", cleared, total)
 }
 
-func newRingBuffer() *proxyTraffic {
-	return &proxyTraffic{}
-}
-
 type proxyTraffic struct {
 	lastTraffic     int64
 	lastTrafficTime int64
