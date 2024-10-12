@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/transport"
@@ -65,7 +66,11 @@ func NewHTTPS2HTTPSPlugin(options v1.ClientPluginOptions) (Plugin, error) {
 				req.Host = p.opts.HostHeaderRewrite
 			}
 			for k, v := range p.opts.RequestHeaders.Set {
-				req.Header.Set(k, v)
+				if strings.TrimSpace(v) == "" {
+					req.Header.Del(k)
+				} else {
+					req.Header.Set(k, v)
+				}
 			}
 		},
 		Transport: tr,
