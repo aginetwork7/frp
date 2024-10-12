@@ -66,10 +66,11 @@ func NewHTTPS2HTTPSPlugin(options v1.ClientPluginOptions) (Plugin, error) {
 				req.Host = p.opts.HostHeaderRewrite
 			}
 			for k, v := range p.opts.RequestHeaders.Set {
-				if strings.TrimSpace(v) == "" {
+				req.Header.Set(k, v)
+			}
+			for k := range req.Header {
+				if strings.TrimSpace(req.Header.Get(k)) == "" {
 					req.Header.Del(k)
-				} else {
-					req.Header.Set(k, v)
 				}
 			}
 		},
