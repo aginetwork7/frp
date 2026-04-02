@@ -24,8 +24,6 @@ jobs:
       uses: golangci/golangci-lint-action@v6
       with:
         version: v1.64.8
-        install-mode: cache
         args: --out-format=colored-line-number --timeout=10m --new-from-rev=HEAD~1 --verbose --print-issued-lines
-        skip-cache: false
       env:
         GOLANGCI_LINT_CACHE: go-lint-cache-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
