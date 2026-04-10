@@ -2,8 +2,8 @@ name: golangci-lint
 on:
   push:
     branches:
-    - master
-    - dev
+      - master
+      - dev
   pull_request:
 permissions:
   contents: read
@@ -11,19 +11,18 @@ permissions:
   pull-requests: read
 jobs:
   test:
-    name: lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
-        cache-dependency-path: "**/*.sum"
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: v1.64.8
-        args: --out-format=colored-line-number --timeout=10m --new-from-rev=HEAD~1 --verbose --print-issued-lines
-      env:
-        GOLANGCI_LINT_CACHE: go-lint-cache-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache-dependency-path: "**/*.sum"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          args: --out-format=colored-line-number --timeout=10m --new-from-rev=HEAD~1 --verbose --print-issued-lines
+        env:
+          GOLANGCI_LINT_CACHE: go-lint-cache-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
