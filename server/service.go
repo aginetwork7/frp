@@ -564,7 +564,7 @@ func (svr *Service) HandleQUICListener(l *quic.Listener) {
 			return
 		}
 		// Start a new goroutine to handle connection.
-		go func(ctx context.Context, frpConn quic.Connection) {
+		go func(ctx context.Context, frpConn *quic.Conn) {
 			for {
 				stream, err := frpConn.AcceptStream(context.Background())
 				if err != nil {
@@ -786,14 +786,15 @@ func (m authMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	}
 
 	cookieData := request.Header.Get("Cookie")
-	var cc string
+	cookies := make([]string, 0)
 	for _, v := range strings.Split(cookieData, ";") {
 		v = strings.TrimSpace(v)
 		if strings.HasPrefix(v, forwardCookieName+".") {
 			continue
 		}
-		cc += v + ";"
+		cookies = append(cookies, v)
 	}
+	cc := strings.Join(cookies, ";")
 	request.Header.Set("Cookie", cc)
 
 	m.next.ServeHTTP(writer, request)
