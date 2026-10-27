@@ -105,7 +105,7 @@ func (svr *Service) apiServerSub(w http.ResponseWriter, r *http.Request) {
 		log.Infof("The client is disconnected here, name=%s", sseName)
 	}()
 
-	svr.ss.ServeHTTP(w, r)
+	serveSSE(svr.ss, w, r)
 }
 
 // /api/serverinfo

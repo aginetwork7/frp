@@ -161,11 +161,8 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 		}
 	}
 
-	server := sse.New()
-	server.AutoStream = true
-
 	svr := &Service{
-		ss: server,
+		ss: newSSEServer(),
 
 		ctlManager:    NewControlManager(),
 		pxyManager:    proxy.NewManager(),
@@ -357,6 +354,7 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	svr.rc.NatHoleController = nc
 
 	svr.checkProxyStatusTimer()
+	go sseHeartbeat(svr.ctx, svr.ss)
 	return svr, nil
 }
 
