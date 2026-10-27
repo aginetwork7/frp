@@ -133,7 +133,8 @@ type Service struct {
 	// call cancel to stop service
 	cancel context.CancelFunc
 
-	ss *sse.Server
+	ss     *sse.Server
+	sseCfg sseConfig
 
 	proxyTraffic sync.Map
 }
@@ -162,7 +163,8 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	}
 
 	svr := &Service{
-		ss: newSSEServer(),
+		ss:     newSSEServer(),
+		sseCfg: defaultSSEConfig(),
 
 		ctlManager:    NewControlManager(),
 		pxyManager:    proxy.NewManager(),
@@ -354,7 +356,6 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	svr.rc.NatHoleController = nc
 
 	svr.checkProxyStatusTimer()
-	go sseHeartbeat(svr.ctx, svr.ss)
 	return svr, nil
 }
 
@@ -387,6 +388,7 @@ func (svr *Service) Run(ctx context.Context) {
 	if svr.rc.NatHoleController != nil {
 		go svr.rc.NatHoleController.CleanWorker(svr.ctx)
 	}
+	go sseHeartbeat(svr.ctx, svr.ss, svr.sseCfg.heartbeatInterval)
 
 	if svr.sshTunnelGateway != nil {
 		go svr.sshTunnelGateway.Run()

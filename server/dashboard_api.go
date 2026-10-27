@@ -102,10 +102,10 @@ func (svr *Service) healthz(w http.ResponseWriter, _ *http.Request) {
 func (svr *Service) apiServerSub(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		<-r.Context().Done()
-		log.Infof("The client is disconnected here, name=%s", sseName)
+		log.Infof("sse stream closed (client disconnected or max lifetime reached), name=%s", sseName)
 	}()
 
-	serveSSE(svr.ss, w, r)
+	serveSSE(svr.ss, svr.sseCfg, w, r)
 }
 
 // /api/serverinfo
