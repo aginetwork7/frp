@@ -3,6 +3,9 @@ name: goreleaser
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -24,7 +27,8 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          version: latest
+          # .goreleaser.yml uses the v1 config format.
+          version: '~> v1'
           args: release --clean --release-notes=./Release.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GPR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
